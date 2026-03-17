@@ -1,1 +1,99 @@
+name: CI - Test and Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local server
+        run: npx http-server . -p 8080 -s &
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:8080/index.html --timeout 15000
+
+      - name: Run browser tests
+        run: |
+          node -e "
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+
+            const failures = [];
+            page.on('console', msg => {
+              const text = msg.text();
+              console.log(text);
+              if (text.includes('FAIL')) failures.push(text);
+            });
+
+            await page.goto('http://localhost:8080/tests/dashboard.test.html');
+            await page.waitForFunction(
+              () => document.getElementById('summary')?.textContent?.match(/^\d+ passed/),
+              { timeout: 30000 }
+            );
+
+            const summary = await page.textContent('#summary');
+            console.log('\\n=== Test Summary ===');
+            console.log(summary);
+
+            await browser.close();
+
+            if (failures.length > 0 || summary.includes('failed')) {
+              console.error('Tests failed');
+              process.exit(1);
+            }
+          })();
+          "
+
+      - name: Validate HTML structure
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf-8');
+          const checks = [
+            [/<html/i, 'Missing <html> tag'],
+            [/<head/i, 'Missing <head> tag'],
+            [/<body/i, 'Missing <body> tag'],
+            [/style\.css/, 'Missing style.css link'],
+            [/script\.js/, 'Missing script.js reference'],
+          ];
+          let failed = false;
+          for (const [regex, msg] of checks) {
+            if (!regex.test(html)) { console.error('FAIL: ' + msg); failed = true; }
+            else { console.log('PASS: ' + msg.replace('Missing', 'Found')); }
+          }
+          if (failed) process.exit(1);
+          console.log('HTML structure validation passed');
+          "
+
+      - name: Build artifact
+        run: |
+          mkdir -p build
+          cp index.html style.css script.js build/
+          cp -r tests build/tests
+          echo "Build complete — static files packaged"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fleet-dashboard-build
+          path: build/
+          retention-days: 30
 
