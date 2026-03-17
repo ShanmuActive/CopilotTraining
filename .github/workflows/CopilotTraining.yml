@@ -43,7 +43,12 @@ jobs:
             page.on('console', msg => {
               const text = msg.text();
               console.log(text);
-              if (text.includes('FAIL')) failures.push(text);
+              if (text.includes('FAIL') || text.includes('fail')) failures.push(text);
+            });
+
+            page.on('pageerror', err => {
+              console.error('Page error:', err.message);
+              failures.push(err.message);
             });
 
             await page.goto('http://localhost:8080/tests/dashboard.test.html');

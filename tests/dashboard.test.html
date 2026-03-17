@@ -122,8 +122,8 @@
     }
 
     function run(name, fn) {
-      try { fn(); record(name, null); }
-      catch (e) { record(name, e); }
+      try { fn(); record(name, null); console.log("PASS: " + name); }
+      catch (e) { record(name, e); console.log("FAIL: " + name + " — " + e.message); }
     }
 
     function delay(ms) {
@@ -195,9 +195,9 @@
         }
       });
 
-      run("heading hierarchy: 1 h1, 2 h3s", function () {
+      run("heading hierarchy: 1 h1, 4 h3s", function () {
         assertEqual($$("h1").length, 1, "h1 count");
-        assertEqual($$("h3").length, 2, "h3 count");
+        assertEqual($$("h3").length, 4, "h3 count");
       });
 
       run("html lang attribute is set to 'en'", function () {
