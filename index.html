@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fleet Telemetry Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <header>
+        <h1>Fleet Telemetry Command Center</h1>
+        <p>Realtime speed, battery, and location status</p>
+      </header>
+
+      <section class="kpis">
+        <article><h2 id="kpi-total">0</h2><span>Vehicles</span></article>
+        <article><h2 id="kpi-online">0</h2><span>Online</span></article>
+        <article><h2 id="kpi-stale">0</h2><span>Stale</span></article>
+        <article><h2 id="kpi-speed">0.0</h2><span>Avg Speed km/h</span></article>
+      </section>
+
+      <section class="filters">
+        <input type="text" id="filter-vehicle" placeholder="Search vehicle ID…" />
+        <select id="filter-status">
+          <option value="">All statuses</option>
+          <option value="online">Online</option>
+          <option value="stale">Stale</option>
+          <option value="offline">Offline</option>
+        </select>
+        <label><input type="checkbox" id="filter-low-battery" /> Low battery (&lt;20%)</label>
+      </section>
+
+      <main>
+        <section class="panel">
+          <h3>Live Fleet State</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Status</th>
+                <th>Speed</th>
+                <th>Battery</th>
+                <th>Coordinates</th>
+                <th>Last Update</th>
+              </tr>
+            </thead>
+            <tbody id="fleet-body"></tbody>
+          </table>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel" id="detail-panel">
+            <h3 id="detail-title">Vehicle Details</h3>
+            <p id="detail-empty">Select a vehicle from the fleet table.</p>
+            <div id="detail-content" class="hidden">
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="detail-label">Speed</span>
+                  <span class="detail-value" id="detail-speed">—</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Battery</span>
+                  <span class="detail-value" id="detail-battery">—</span>
+                  <div class="battery-bar"><div class="battery-fill" id="detail-battery-bar"></div></div>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Location</span>
+                  <span class="detail-value" id="detail-location">—</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Status</span>
+                  <span id="detail-status">—</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Last Update</span>
+                  <span class="detail-value" id="detail-time">—</span>
+                </div>
+              </div>
+              <h4>GPS Trail</h4>
+              <canvas id="gps-canvas" width="300" height="200"></canvas>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3 id="timeline-title">Vehicle Timeline</h3>
+            <p id="timeline-empty">Select a vehicle to view recent telemetry events.</p>
+            <ul class="timeline" id="timeline-list"></ul>
+          </section>
+
+          <section class="panel" id="alert-panel">
+            <h3>Alerts <span class="badge" id="alert-count">0</span></h3>
+            <ul class="alert-list" id="alert-list"></ul>
+            <p id="alert-empty">No alerts.</p>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

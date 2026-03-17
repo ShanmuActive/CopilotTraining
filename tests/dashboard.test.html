@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Tests</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Segoe UI, Tahoma, sans-serif; background: #fafafa; color: #222; }
+    .runner { max-width: 960px; margin: 0 auto; padding: 1rem; }
+    h1 { font-size: 1.3rem; margin-bottom: 0.3rem; }
+    #summary { margin-bottom: 0.75rem; font-size: 0.95rem; color: #555; }
+    .suite-title { font-weight: 600; margin: 0.75rem 0 0.25rem; font-size: 0.95rem; }
+    .result { padding: 0.35rem 0.6rem; margin: 0.15rem 0; border-radius: 6px; font-size: 0.88rem; display: flex; align-items: center; gap: 0.5rem; }
+    .result.pass { background: #e6f4ea; }
+    .result.fail { background: #fce8e6; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .pass .dot { background: #1e8e3e; }
+    .fail .dot { background: #d93025; }
+    .fail-detail { font-size: 0.8rem; color: #d93025; margin-left: 1.5rem; }
+    iframe { display: none; }
+  </style>
+</head>
+<body>
+  <div class="runner">
+    <h1>Fleet Telemetry Dashboard — Test Results</h1>
+    <div id="summary">Running…</div>
+    <div id="results"></div>
+  </div>
+
+  <iframe id="app" src="../index.html" width="1200" height="800"></iframe>
+
+  <script>
+  (function () {
+    "use strict";
+
+    var VEHICLE_IDS = ["VEH-1001", "VEH-1002", "VEH-1003", "VEH-1004"];
+    var results = [];
+    var resultsEl = document.getElementById("results");
+    var summaryEl = document.getElementById("summary");
+    var currentSuite = "";
+
+    // ── Minimal assertion helpers ──
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || "Assertion failed");
+    }
+
+    function assertEqual(actual, expected, label) {
+      if (actual !== expected) {
+        throw new Error((label || "assertEqual") + ": expected " + JSON.stringify(expected) + " but got " + JSON.stringify(actual));
+      }
+    }
+
+    function assertMatch(text, regex, label) {
+      if (!regex.test(text)) {
+        throw new Error((label || "assertMatch") + ': "' + text + '" does not match ' + regex);
+      }
+    }
+
+    function assertVisible(el, label) {
+      assert(el !== null, (label || "element") + " not found in DOM");
+      var style = el.ownerDocument.defaultView.getComputedStyle(el);
+      assert(style.display !== "none" && style.visibility !== "hidden",
+        (label || "element") + " is not visible");
+    }
+
+    function assertHidden(el, label) {
+      if (!el) return;
+      var style = el.ownerDocument.defaultView.getComputedStyle(el);
+      assert(style.display === "none" || style.visibility === "hidden",
+        (label || "element") + " should be hidden");
+    }
+
+    // ── DOM query helpers against the iframe document ──
+
+    function doc() {
+      return document.getElementById("app").contentDocument;
+    }
+
+    function $(selector) { return doc().querySelector(selector); }
+    function $$(selector) { return doc().querySelectorAll(selector); }
+
+    function getByText(text, root) {
+      var base = root || doc().body;
+      var walker = doc().createTreeWalker(base, NodeFilter.SHOW_TEXT, null, false);
+      while (walker.nextNode()) {
+        if (walker.currentNode.textContent.trim() === text) return walker.currentNode.parentElement;
+      }
+      return null;
+    }
+
+    function getByTextMatch(regex, root) {
+      var base = root || doc().body;
+      var walker = doc().createTreeWalker(base, NodeFilter.SHOW_TEXT, null, false);
+      while (walker.nextNode()) {
+        if (regex.test(walker.currentNode.textContent.trim())) return walker.currentNode.parentElement;
+      }
+      return null;
+    }
+
+    // ── Test runner ──
+
+    function suite(name) { currentSuite = name; }
+
+    function record(name, error) {
+      var passed = !error;
+      results.push({ suite: currentSuite, name: name, passed: passed, error: error });
+
+      var html = "";
+      if (results.length === 1 || results[results.length - 2].suite !== currentSuite) {
+        html += '<div class="suite-title">' + currentSuite + "</div>";
+      }
+      html += '<div class="result ' + (passed ? "pass" : "fail") + '">';
+      html += '<span class="dot"></span>' + name;
+      html += "</div>";
+      if (!passed) {
+        html += '<div class="fail-detail">' + error.message + "</div>";
+      }
+
+      resultsEl.insertAdjacentHTML("beforeend", html);
+    }
+
+    function run(name, fn) {
+      try { fn(); record(name, null); }
+      catch (e) { record(name, e); }
+    }
+
+    function delay(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function updateSummary() {
+      var passed = results.filter(function (r) { return r.passed; }).length;
+      var failed = results.length - passed;
+      summaryEl.textContent = passed + " passed, " + failed + " failed, " + results.length + " total";
+      summaryEl.style.color = failed > 0 ? "#d93025" : "#1e8e3e";
+    }
+
+    // ── Wait for iframe to load + first simulator tick ──
+
+    function waitForApp() {
+      return new Promise(function (resolve) {
+        var iframe = document.getElementById("app");
+        iframe.addEventListener("load", function () {
+          var check = setInterval(function () {
+            var body = doc().getElementById("fleet-body");
+            if (body && body.querySelectorAll("tr").length >= VEHICLE_IDS.length) {
+              clearInterval(check);
+              resolve();
+            }
+          }, 200);
+        });
+      });
+    }
+
+    // ── Test suites ──
+
+    async function runAllTests() {
+
+      // ⏳ Wait for dashboard data
+      await waitForApp();
+
+      // ── Suite 1: Launch and initial structure ──
+      suite("Dashboard launch and initial load");
+
+      run("page title is correct", function () {
+        assertEqual(doc().title, "Fleet Telemetry Dashboard", "title");
+      });
+
+      run("header heading is visible", function () {
+        var h1 = doc().querySelector("h1");
+        assertVisible(h1, "h1");
+        assertEqual(h1.textContent, "Fleet Telemetry Command Center", "h1 text");
+      });
+
+      run("subtitle is visible", function () {
+        var el = getByText("Realtime speed, battery, and location status");
+        assertVisible(el, "subtitle");
+      });
+
+      run("four KPI labels are rendered", function () {
+        assertVisible(getByText("Vehicles"), "Vehicles KPI");
+        assertVisible(getByText("Online"), "Online KPI");
+        assertVisible(getByText("Stale"), "Stale KPI");
+        assertVisible(getByText("Avg Speed km/h"), "Avg Speed KPI");
+      });
+
+      run("fleet table has 6 column headers", function () {
+        var headers = $$("thead th");
+        assertEqual(headers.length, 6, "column count");
+        var expected = ["Vehicle", "Status", "Speed", "Battery", "Coordinates", "Last Update"];
+        for (var i = 0; i < expected.length; i++) {
+          assertEqual(headers[i].textContent.trim(), expected[i], "header " + i);
+        }
+      });
+
+      run("heading hierarchy: 1 h1, 2 h3s", function () {
+        assertEqual($$("h1").length, 1, "h1 count");
+        assertEqual($$("h3").length, 2, "h3 count");
+      });
+
+      run("html lang attribute is set to 'en'", function () {
+        assertEqual(doc().documentElement.getAttribute("lang"), "en", "lang attr");
+      });
+
+      // ── Suite 2: Telemetry simulation populates data ──
+      suite("Telemetry simulation populates fleet state");
+
+      run("all 4 vehicle rows are present", function () {
+        var rows = $$("#fleet-body tr");
+        assertEqual(rows.length, VEHICLE_IDS.length, "row count");
+        VEHICLE_IDS.forEach(function (vid) {
+          var cell = getByText(vid, $("#fleet-body"));
+          assertVisible(cell, vid + " cell");
+        });
+      });
+
+      run("KPI total shows 4", function () {
+        assertEqual($("#kpi-total").textContent, "4", "kpi-total");
+      });
+
+      run("online status pills are visible", function () {
+        var pill = doc().querySelector(".pill.online");
+        assertVisible(pill, "online pill");
+      });
+
+      run("battery values show % suffix", function () {
+        var cells = $$("#fleet-body td");
+        var found = false;
+        cells.forEach(function (td) { if (/^\d+%$/.test(td.textContent.trim())) found = true; });
+        assert(found, "No battery cell with % found");
+      });
+
+      run("speed values are decimal numbers", function () {
+        var cells = $$("#fleet-body td");
+        var found = false;
+        cells.forEach(function (td) { if (/^\d+\.\d$/.test(td.textContent.trim())) found = true; });
+        assert(found, "No speed cell with N.N format found");
+      });
+
+      run("coordinate pairs are visible", function () {
+        var found = getByTextMatch(/\d+\.\d{4}, \d+\.\d{4}/, $("#fleet-body"));
+        assertVisible(found, "coordinates cell");
+      });
+
+      run("average speed KPI is non-zero", function () {
+        var speed = $("#kpi-speed").textContent.trim();
+        assert(speed !== "0.0", "Avg speed should not be 0.0");
+      });
+
+      // ── Suite 3: Vehicle selection and timeline ──
+      suite("Vehicle row selection and timeline display");
+
+      run("clicking a row selects it and updates timeline heading", function () {
+        var row = $$("#fleet-body tr")[0];
+        row.click();
+        assert(row.classList.contains("selected"), "Row should have selected class");
+        var title = $("#timeline-title").textContent;
+        assertMatch(title, /Vehicle Timeline/, "timeline heading");
+        assertMatch(title, new RegExp(VEHICLE_IDS[0]), "timeline heading contains vehicle id");
+      });
+
+      run("placeholder text is hidden after selection", function () {
+        $$("#fleet-body tr")[0].click();
+        assertHidden($("#timeline-empty"), "timeline placeholder");
+      });
+
+      run("timeline shows entries with speed, battery, GPS", function () {
+        $$("#fleet-body tr")[0].click();
+        var items = $$("#timeline-list li");
+        assert(items.length > 0, "No timeline entries");
+        var text = items[0].textContent;
+        assertMatch(text, /Speed \d+\.\d km\/h/, "speed in timeline");
+        assertMatch(text, /Battery \d+%/, "battery in timeline");
+        assertMatch(text, /GPS \d+\.\d{4}/, "GPS in timeline");
+      });
+
+      run("switching vehicle updates the timeline heading", function () {
+        $$("#fleet-body tr")[0].click();
+        var titleA = $("#timeline-title").textContent;
+
+        $$("#fleet-body tr")[2].click();
+        var titleB = $("#timeline-title").textContent;
+
+        assert(titleA !== titleB, "Timeline heading should change on vehicle switch");
+        assertMatch(titleB, new RegExp(VEHICLE_IDS[2]), "heading contains second vehicle id");
+      });
+
+      // ── Suite 4: Realtime updates ──
+      suite("Realtime telemetry updates");
+
+      await (async function () {
+        var row = $$("#fleet-body tr")[0];
+        var cells = row.querySelectorAll("td");
+        var speedBefore = cells[2].textContent;
+
+        await delay(2500);
+
+        var speedAfter = $$("#fleet-body tr")[0].querySelectorAll("td")[2].textContent;
+
+        run("speed value updates after simulator ticks", function () {
+          assert(speedBefore !== speedAfter,
+            "Speed should change: was " + speedBefore + ", still " + speedAfter);
+        });
+
+        run("KPI total stays in sync with row count", function () {
+          var kpiVal = Number($("#kpi-total").textContent);
+          var rowCount = $$("#fleet-body tr").length;
+          assertEqual(kpiVal, rowCount, "KPI total vs row count");
+        });
+      })();
+
+      // ── Suite 5: Table structure ──
+      suite("Layout and accessibility");
+
+      run("single table element exists", function () {
+        assertEqual($$("table").length, 1, "table count");
+      });
+
+      run("table has exactly 6 column headers", function () {
+        assertEqual($$("th").length, 6, "th count");
+      });
+
+      // ── Done ──
+      updateSummary();
+    }
+
+    runAllTests();
+  })();
+  </script>
+</body>
+</html>

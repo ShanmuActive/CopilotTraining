@@ -1,0 +1,310 @@
+:root {
+  --bg: #f2f7f4;
+  --panel: #ffffff;
+  --ink: #123028;
+  --muted: #4f6f66;
+  --accent: #007f5f;
+  --warn: #f77f00;
+  --danger: #c1121f;
+  --line: #d7e2dc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+  background: radial-gradient(circle at top right, #d8f3dc, var(--bg));
+  color: var(--ink);
+}
+
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header h1 {
+  margin-bottom: 0.2rem;
+}
+
+header p {
+  margin-top: 0;
+  color: var(--muted);
+}
+
+/* ── KPI strip ── */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.kpis article {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.kpis h2 {
+  margin: 0;
+}
+
+/* ── Filter bar ── */
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filters input[type="text"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  width: 200px;
+}
+
+.filters select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.filters label {
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+/* ── Main panels ── */
+
+main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.75rem;
+}
+
+.sidebar {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem;
+  min-height: 360px;
+}
+
+/* ── Fleet table ── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 0.5rem;
+  font-size: 0.92rem;
+}
+
+tr:hover {
+  background: #f3faf6;
+  cursor: pointer;
+}
+
+tr.selected {
+  background: #e9f5ef;
+}
+
+/* ── Status pills ── */
+
+.pill {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  text-transform: capitalize;
+  color: #fff;
+}
+
+.pill.online {
+  background: var(--accent);
+}
+
+.pill.stale {
+  background: var(--warn);
+}
+
+.pill.offline {
+  background: var(--danger);
+}
+
+/* ── Timeline ── */
+
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.timeline li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.hidden {
+  display: none;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  main {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters input[type="text"] {
+    width: 100%;
+  }
+}
+
+/* ── Vehicle detail panel ── */
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.detail-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* ── Battery gauge ── */
+
+.battery-bar {
+  height: 8px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.2rem;
+}
+
+.battery-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.battery-fill.low {
+  background: var(--danger);
+}
+
+.battery-fill.mid {
+  background: var(--warn);
+}
+
+/* ── GPS trail canvas ── */
+
+#gps-canvas {
+  width: 100%;
+  height: 200px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbf9;
+}
+
+/* ── Alert feed ── */
+
+.alert-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.alert-list li {
+  font-size: 0.84rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+.alert-list li.alert-critical {
+  background: #fce8e6;
+  color: var(--danger);
+}
+
+.alert-list li.alert-warning {
+  background: #fff4e5;
+  color: #b86e00;
+}
+
+.alert-list li.alert-info {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.badge {
+  font-size: 0.75rem;
+  background: var(--danger);
+  color: #fff;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.badge.zero {
+  background: var(--muted);
+}
