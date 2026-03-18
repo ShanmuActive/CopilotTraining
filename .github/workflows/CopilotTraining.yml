@@ -43,7 +43,7 @@ jobs:
             page.on('console', msg => {
               const text = msg.text();
               console.log(text);
-              if (text.includes('FAIL') || text.includes('fail')) failures.push(text);
+              if (text.startsWith('FAIL:')) failures.push(text);
             });
 
             page.on('pageerror', err => {
@@ -63,8 +63,10 @@ jobs:
 
             await browser.close();
 
-            if (failures.length > 0 || summary.includes('failed')) {
-              console.error('Tests failed');
+            const failMatch = summary.match(/(\d+) failed/);
+            const failCount = failMatch ? parseInt(failMatch[1], 10) : 0;
+            if (failures.length > 0 || failCount > 0) {
+              console.error('Tests failed: ' + failCount + ' test(s)');
               process.exit(1);
             }
           })();
