@@ -253,9 +253,9 @@
       suite("Vehicle row selection and timeline display");
 
       run("clicking a row selects it and updates timeline heading", function () {
-        var row = $$("#fleet-body tr")[0];
-        row.click();
-        assert(row.classList.contains("selected"), "Row should have selected class");
+        $$("#fleet-body tr")[0].click();
+        var freshRow = $$("#fleet-body tr")[0];
+        assert(freshRow.classList.contains("selected"), "Row should have selected class");
         var title = $("#timeline-title").textContent;
         assertMatch(title, /Vehicle Timeline/, "timeline heading");
         assertMatch(title, new RegExp(VEHICLE_IDS[0]), "timeline heading contains vehicle id");
